@@ -26,14 +26,21 @@ document.addEventListener("contextmenu", function(event) {
 	}
 });
 
-chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if (request == "getClickedEl") {
     	// We must restore colors from inherited to inline
     	var styles = window.getComputedStyle(clickedEl);
     	clickedEl.style.fill = styles.getPropertyValue("fill");
     	clickedEl.style.stroke = styles.getPropertyValue("stroke");
+        var rect = clickedEl.getBoundingClientRect();
 
     	// Pass element along
-    	sendResponse({value: clickedEl.outerHTML});
+    	sendResponse({
+            value: clickedEl.outerHTML,
+            size: {
+                width: rect.width,
+                height: rect.height
+            }
+        });
     }
 });

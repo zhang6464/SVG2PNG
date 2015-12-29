@@ -14,7 +14,8 @@ function genericOnClick(info, tab) {
 	chrome.tabs.sendMessage(tab.id, "getClickedEl", function(response) {
 
 		// Get our element raw html
-		var elementHTML = response.value;
+		var elementHTML = response.value,
+			size = response.size;
 
 		// Find <svg> element based on our unique class
 		var div = document.createElement("div");
@@ -28,50 +29,45 @@ function genericOnClick(info, tab) {
 		}
 
 		// Ask for image ize
-		imageSize = prompt("Please enter your image size", imageSize);
-		imageSize = (imageSize != null) ? parseInt(imageSize) : 256;
+		imageSize = prompt("Please enter the scale (%)", imageSize);
+		imageSize = (imageSize != null) ? parseInt(imageSize) : 200;
 
 		// Ask for image name
 		imageName = prompt("Please enter your image name", imageName);
 		if (imageName == null) imageName = "image";
 
-		// Save on all retina forms (1x, 2x and 3x)
-		for (var i = 1; i <= 3; i++) {
+		// Declare closure
+		function generateImage() {
+			return function() {
+				// Create an image
+				var image = new Image; // Not shown on page
+				var svgAsXML = (new XMLSerializer).serializeToString(elementSVG);
+				image.src = 'data:image/svg+xml,' + encodeURIComponent(svgAsXML);
+				image.width = size.width * imageSize/100;
+				image.height = size.height * imageSize/100;
+console.log(image);
+				image.onload = function() {
+					// Draw our image on canvas
+					var canvas = document.createElement('canvas');
+					var ctx = canvas.getContext('2d');
+					canvas.width = image.width;
+					canvas.height = image.height;
+					ctx.drawImage(image, 0, 0, image.width, image.height);
 
-			// Declare closure
-			function generateImage(index) {
-				return function() {
-					// Create an image
-					var image = new Image; // Not shown on page
-					var svgAsXML = (new XMLSerializer).serializeToString(elementSVG);
-					image.src = 'data:image/svg+xml,' + encodeURIComponent(svgAsXML);
-					image.width = imageSize * index;
-					image.height = imageSize * index;
+					// Download our image
+					var a = document.createElement('a');
+					a.download = imageName + ".png";
+					a.href = canvas.toDataURL('image/png');
+					document.body.appendChild(a);
+					a.addEventListener("click", function(e) {
+						a.parentNode.removeChild(a);
+					});
+					a.click();
+				};
+			}();
+		}
 
-					image.onload = function() {
-						// Draw our image on canvas
-						var canvas = document.createElement('canvas');
-						var ctx = canvas.getContext('2d');
-						canvas.width = image.width;
-						canvas.height = image.height;
-						ctx.drawImage(image, 0, 0, image.width, image.height);
-
-						// Download our image
-						var a = document.createElement('a');
-						a.download = imageName + ((index > 1) ? "@" + index + "x" : "") + ".png";
-						a.href = canvas.toDataURL('image/png');
-						document.body.appendChild(a);
-						a.addEventListener("click", function(e) {
-							a.parentNode.removeChild(a);
-						});
-						a.click();
-					};
-				}();
-			}
-
-           	// Execute it
-           	generateImage(i);
-           }
+        generateImage();
        });
 }
 
